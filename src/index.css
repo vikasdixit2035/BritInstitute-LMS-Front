@@ -2406,6 +2406,38 @@ tbody td {
   margin-top: 6px;
 }
 
+.form-help {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.project-skill-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.project-skill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: rgba(36, 87, 211, 0.09);
+  color: #2457d3;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.student-project-skills {
+  margin-top: 12px;
+}
+
+.student-project-card {
+  align-items: start;
+}
+
 .student-assignment-card,
 .student-session-card {
   display: flex;

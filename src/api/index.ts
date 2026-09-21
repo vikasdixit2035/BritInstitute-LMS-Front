@@ -95,6 +95,14 @@ export const studyMaterialApi = {
   delete: (id: string) => api.delete(`/study-materials/${id}`),
 };
 
+export const projectApi = {
+  getAll: (batch?: string) => api.get('/projects', { params: batch ? { batch } : undefined }),
+  create: (data: FormData) => api.post('/projects', data),
+  update: (id: string, data: FormData) => api.put(`/projects/${id}`, data),
+  delete: (id: string) => api.delete(`/projects/${id}`),
+  download: (id: string) => api.get(`/projects/${id}/download`, { responseType: 'blob' }),
+};
+
 // Assignments
 export const assignmentApi = {
   getAll: (batch?: string) => api.get('/assignments', { params: batch ? { batch } : undefined }),

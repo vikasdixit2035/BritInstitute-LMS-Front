@@ -136,6 +136,7 @@ export default function AdminDashboard() {
             { label: '+ Schedule Class', path: `${basePath}/live-classes`, emoji: '🎥' },
             { label: '+ Add Recording', path: `${basePath}/recorded`, emoji: '🎬' },
             { label: '+ New Assignment', path: `${basePath}/assignments`, emoji: '📝' },
+            { label: '+ Add Project', path: `${basePath}/projects`, emoji: '💼' },
           ].map(a => (
             <button key={a.path} className="btn btn-secondary" onClick={() => navigate(a.path)}>
               {a.emoji} {a.label}

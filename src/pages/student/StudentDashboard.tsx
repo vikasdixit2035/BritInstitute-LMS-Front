@@ -1,13 +1,13 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { liveClassApi, recordedApi, assignmentApi, sessionApi, curriculumApi, studentPortalApi, foundationApi, studyMaterialApi } from '../../api';
+import { liveClassApi, recordedApi, assignmentApi, sessionApi, curriculumApi, studentPortalApi, foundationApi, studyMaterialApi, projectApi } from '../../api';
 import BrandLogo from '../../components/BrandLogo';
 import RecordedLecturePlayer from '../../components/RecordedLecturePlayer';
 import ChangePasswordForm from '../../components/ChangePasswordForm';
 import { formatUkDate, formatUkDateTime, formatUkTime, toUkDateInputValue } from '../../utils/ukTime';
 
-type MainView = 'dashboard' | 'curriculum' | 'sessions' | 'performance' | 'certificates' | 'assistant' | 'foundation' | 'study-materials' | 'settings';
+type MainView = 'dashboard' | 'curriculum' | 'sessions' | 'performance' | 'certificates' | 'foundation' | 'study-materials' | 'projects' | 'settings';
 type DashboardTab = 'live' | 'assignments' | 'recorded';
 
 interface LiveClass {
@@ -46,6 +46,17 @@ interface StudyMaterial {
   materialUrl: string;
   materialType: string;
   order: number;
+  createdAt: string;
+}
+
+interface Project {
+  _id: string;
+  name: string;
+  description: string;
+  skills: string[];
+  resourceType: 'drive' | 'zip';
+  resourceUrl?: string;
+  originalFileName?: string;
   createdAt: string;
 }
 
@@ -130,12 +141,6 @@ interface StudentPortalSummary {
   };
 }
 
-interface StudyPlan {
-  prompt: string;
-  response: string;
-  steps: string[];
-}
-
 const VIDEO_TYPE_INFO: Record<string, { icon: string; label: string; color: string }> = {
   youtube:     { icon: 'YT', label: 'YouTube', color: '#dc2626' },
   drive:       { icon: 'DR', label: 'Google Drive', color: '#059669' },
@@ -191,6 +196,7 @@ export default function StudentDashboard() {
   const [portalSummary, setPortalSummary] = useState<StudentPortalSummary | null>(null);
   const [foundationResources, setFoundationResources] = useState<FoundationResource[]>([]);
   const [studyMaterials, setStudyMaterials] = useState<StudyMaterial[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [portalError, setPortalError] = useState('');
 
   const [loading, setLoading] = useState(true);
@@ -210,12 +216,9 @@ export default function StudentDashboard() {
   const [submissionSaving, setSubmissionSaving] = useState(false);
   const [submissionError, setSubmissionError] = useState('');
   const [submissionForm, setSubmissionForm] = useState({ driveLink: '', fileLink: '', repoLink: '', notes: '' });
-  const [assistantDraft, setAssistantDraft] = useState('');
-  const [assistantAnswer, setAssistantAnswer] = useState<StudyPlan | null>(null);
-  const [assistantLoading, setAssistantLoading] = useState(false);
-  const [assistantError, setAssistantError] = useState('');
   const [certificateRequesting, setCertificateRequesting] = useState(false);
   const [certificateMessage, setCertificateMessage] = useState('');
+  const [downloadingProjectId, setDownloadingProjectId] = useState<string | null>(null);
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const courseId = (user?.enrolledCourse as { _id?: string } | undefined)?._id;
@@ -225,7 +228,7 @@ export default function StudentDashboard() {
     if (!courseId) { setLoading(false); return; }
     setLoading(true);
     try {
-      const [lc, lv, as, bs, ms, curr, summary, foundation, materials] = await Promise.all([
+      const [lc, lv, as, bs, ms, curr, summary, foundation, materials, projectRes] = await Promise.all([
         liveClassApi.getMine(),
         recordedApi.getMine(),
         assignmentApi.getMine(),
@@ -235,6 +238,7 @@ export default function StudentDashboard() {
         studentPortalApi.getSummary().catch(() => ({ data: { summary: null } })),
         foundationApi.getAll().catch(() => ({ data: { resources: [] } })),
         studyMaterialApi.getAll().catch(() => ({ data: { materials: [] } })),
+        projectApi.getAll().catch(() => ({ data: { projects: [] } })),
       ]);
       setLiveClasses(lc.data.liveClasses);
       setLectures(lv.data.lectures);
@@ -245,6 +249,7 @@ export default function StudentDashboard() {
       setPortalSummary(summary.data.summary);
       setFoundationResources(foundation.data.resources || []);
       setStudyMaterials(materials.data.materials || []);
+      setProjects(projectRes.data.projects || []);
       setPortalError(summary.data.summary ? '' : 'Some student insight widgets could not load from the backend.');
 
       const wt: Record<string, number> = {};
@@ -413,6 +418,25 @@ export default function StudentDashboard() {
     }
   };
 
+  const handleProjectDownload = async (project: Project) => {
+    setDownloadingProjectId(project._id);
+    try {
+      const response = await projectApi.download(project._id);
+      const url = URL.createObjectURL(response.data);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = project.originalFileName || `${project.name}.zip`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(url);
+    } catch {
+      alert('Unable to download this project ZIP. Please try again.');
+    } finally {
+      setDownloadingProjectId(null);
+    }
+  };
+
   const handleLogout = () => { logout(); navigate('/login'); };
 
   const now = new Date();
@@ -472,9 +496,9 @@ export default function StudentDashboard() {
     { id: 'sessions', code: 'MT', label: 'Mentoring' },
     { id: 'performance', code: 'AN', label: 'Analytics' },
     { id: 'certificates', code: 'CF', label: 'Certificates' },
-    { id: 'assistant', code: 'AI', label: 'Study Assistant' },
     { id: 'foundation', code: 'FB', label: 'Foundation & Build-Up' },
     { id: 'study-materials', code: 'SM', label: 'Study Material' },
+    { id: 'projects', code: 'PJ', label: 'Projects' },
     { id: 'settings', code: 'ST', label: 'Settings' },
   ];
 
@@ -499,33 +523,6 @@ export default function StudentDashboard() {
       { title: 'Class readiness', action: nextClass ? `Prepare for ${nextClass.classNumber}` : 'Watch for the next schedule' },
     ];
   const selectedSlot = mentorSlots.find(slot => slot.dateTime === bookingForm.dateTime);
-
-  const requestStudyPlan = async (prompt: string) => {
-    const cleanPrompt = prompt.trim();
-    if (!cleanPrompt) {
-      setAssistantError('Please enter a study goal or choose a prompt.');
-      return;
-    }
-    setAssistantLoading(true);
-    setAssistantError('');
-    try {
-      const res = await studentPortalApi.createStudyPlan({ prompt: cleanPrompt });
-      setAssistantAnswer(res.data.plan);
-    } catch (err: any) {
-      setAssistantError(err.response?.data?.message || 'Unable to generate study plan. Please try again.');
-    } finally {
-      setAssistantLoading(false);
-    }
-  };
-
-  const handleAssistantPrompt = async (prompt: string) => {
-    setAssistantDraft(prompt);
-    await requestStudyPlan(prompt);
-  };
-
-  const handleAssistantSubmit = async () => {
-    await requestStudyPlan(assistantDraft);
-  };
 
   const handleCertificateRequest = async () => {
     setCertificateRequesting(true);
@@ -799,7 +796,6 @@ export default function StudentDashboard() {
           <p>{courseTitle}</p>
           <div className="student-hero-actions">
             <button className="btn btn-primary" onClick={() => { setDashTab('live'); setView('dashboard'); }}>View Schedule</button>
-            <button className="btn btn-secondary" onClick={() => setView('assistant')}>Open Study Assistant</button>
           </div>
         </div>
         <div className="student-readiness-card">
@@ -1125,51 +1121,6 @@ export default function StudentDashboard() {
     </>
   );
 
-  const renderAssistant = () => (
-    <>
-      <section className="student-page-hero">
-        <span className="student-eyebrow">AI study assistant</span>
-        <h1>Plan your next study block</h1>
-        <p>Get a quick study plan based on your current classes, recordings, and assignments.</p>
-      </section>
-
-      <section className="student-assistant-panel">
-        <div className="student-prompt-grid">
-          {[
-            'Help me revise my latest class',
-            'Plan my assignment submission',
-            'Prepare me for my next live class',
-          ].map(prompt => (
-            <button key={prompt} onClick={() => handleAssistantPrompt(prompt)} disabled={assistantLoading}>{prompt}</button>
-          ))}
-        </div>
-        {assistantError && <div className="alert alert-error">{assistantError}</div>}
-        <textarea
-          className="form-textarea student-assistant-input"
-          rows={5}
-          placeholder="Ask for a study plan, revision checklist, or project practice idea..."
-          value={assistantDraft}
-          onChange={e => setAssistantDraft(e.target.value)}
-        />
-        <div className="student-assistant-actions">
-          <button className="btn btn-primary" onClick={handleAssistantSubmit} disabled={assistantLoading}>
-            {assistantLoading ? 'Generating...' : 'Generate Study Plan'}
-          </button>
-          <button className="btn btn-secondary" onClick={() => { setAssistantDraft(''); setAssistantAnswer(null); setAssistantError(''); }}>Clear</button>
-        </div>
-        {assistantAnswer && (
-          <div className="student-assistant-answer">
-            <span>Suggested plan</span>
-            <p>{assistantAnswer.response}</p>
-            <ol>
-              {assistantAnswer.steps.map((step) => <li key={step}>{step}</li>)}
-            </ol>
-          </div>
-        )}
-      </section>
-    </>
-  );
-
   const renderFoundationBuildUp = () => (
     <>
       <section className="student-page-hero">
@@ -1273,6 +1224,59 @@ export default function StudentDashboard() {
     </>
   );
 
+  const renderProjects = () => (
+    <>
+      <section className="student-page-hero">
+        <span className="student-eyebrow">Projects</span>
+        <h1>Build your portfolio</h1>
+        <p>Open the practical projects shared with your batch and see the skills each project will help you apply.</p>
+      </section>
+
+      <section className="student-section-panel">
+        <div className="student-section-head">
+          <div>
+            <span className="student-eyebrow">Batch projects</span>
+            <h2>Projects ready to start</h2>
+          </div>
+          <span className="student-pill primary">{projects.length} available</span>
+        </div>
+
+        {projects.length === 0 ? (
+          <div className="student-empty-panel embedded">
+            <div className="student-empty-mark">PJ</div>
+            <h3>No projects yet</h3>
+            <p>Projects will appear here once your teacher or mentor publishes them for your batch.</p>
+          </div>
+        ) : (
+          <div className="student-material-grid">
+            {projects.map((project, index) => (
+              <article key={project._id} className="student-material-card student-project-card">
+                <div className="student-type-mark" style={{ background: project.resourceType === 'zip' ? '#7c3aed15' : '#05966915', color: project.resourceType === 'zip' ? '#7c3aed' : '#059669' }}>
+                  {project.resourceType === 'zip' ? 'ZIP' : 'DR'}
+                </div>
+                <div className="student-material-copy">
+                  <span>Project #{index + 1} • {project.resourceType === 'zip' ? 'ZIP download' : 'Google Drive'}</span>
+                  <h3>{project.name}</h3>
+                  {project.description && <p>{project.description}</p>}
+                  <div className="project-skill-list student-project-skills">
+                    {(project.skills || []).map(skill => <span key={skill} className="project-skill">{skill}</span>)}
+                  </div>
+                </div>
+                {project.resourceType === 'drive' ? (
+                  <a className="btn btn-primary btn-sm" href={project.resourceUrl} target="_blank" rel="noreferrer">Open Project</a>
+                ) : (
+                  <button className="btn btn-primary btn-sm" onClick={() => handleProjectDownload(project)} disabled={downloadingProjectId === project._id}>
+                    {downloadingProjectId === project._id ? 'Downloading...' : 'Download ZIP'}
+                  </button>
+                )}
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
+    </>
+  );
+
   const renderSettings = () => (
     <section className="student-settings-panel">
       <span className="student-eyebrow">Account</span>
@@ -1341,9 +1345,9 @@ export default function StudentDashboard() {
             {view === 'sessions' && renderSessions()}
             {view === 'performance' && renderPerformance()}
             {view === 'certificates' && renderCertificates()}
-            {view === 'assistant' && renderAssistant()}
             {view === 'foundation' && renderFoundationBuildUp()}
             {view === 'study-materials' && renderStudyMaterials()}
+            {view === 'projects' && renderProjects()}
             {view === 'settings' && renderSettings()}
           </div>
         )}
