@@ -14,7 +14,7 @@ interface Project {
   name: string;
   description: string;
   skills: string[];
-  resourceType: 'drive' | 'zip';
+  resourceType: 'drive' | 'github' | 'zip';
   resourceUrl?: string;
   originalFileName?: string;
   createdAt: string;
@@ -25,7 +25,7 @@ const emptyForm = {
   name: '',
   description: '',
   skills: '',
-  resourceType: 'drive' as 'drive' | 'zip',
+  resourceType: 'drive' as 'drive' | 'github' | 'zip',
   resourceUrl: '',
 };
 
@@ -101,8 +101,8 @@ export default function AdminProjects() {
       setError('Batch and project name are required');
       return;
     }
-    if (form.resourceType === 'drive' && !form.resourceUrl.trim()) {
-      setError('A Google Drive link is required');
+    if (form.resourceType !== 'zip' && !form.resourceUrl.trim()) {
+      setError(form.resourceType === 'github' ? 'A GitHub repository link is required' : 'A Google Drive link is required');
       return;
     }
     if (form.resourceType === 'zip' && !projectFile && (!editProject || editProject.resourceType !== 'zip')) {
@@ -163,7 +163,7 @@ export default function AdminProjects() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Projects</h1>
-          <p className="page-subtitle">Publish practical projects to a batch as a Google Drive link or ZIP file</p>
+          <p className="page-subtitle">Publish practical projects to a batch as a GitHub repository, Google Drive link or ZIP file</p>
         </div>
         <button className="btn btn-primary" onClick={openCreate}>+ Add Project</button>
       </div>
@@ -193,8 +193,8 @@ export default function AdminProjects() {
                   <td><strong>{project.batch?.name || 'Batch not found'}</strong>{project.batch?.course?.title && <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '3px' }}>{project.batch.course.title}</p>}</td>
                   <td><div className="project-skill-list">{project.skills.length ? project.skills.map(skill => <span key={skill} className="project-skill">{skill}</span>) : <span className="text-muted">—</span>}</div></td>
                   <td>
-                    {project.resourceType === 'drive' ? (
-                      <a className="btn btn-secondary btn-sm" href={project.resourceUrl} target="_blank" rel="noreferrer">Open Drive</a>
+                    {project.resourceType !== 'zip' ? (
+                      <a className="btn btn-secondary btn-sm" href={project.resourceUrl} target="_blank" rel="noreferrer">{project.resourceType === 'github' ? 'Open GitHub' : 'Open Drive'}</a>
                     ) : (
                       <button className="btn btn-secondary btn-sm" onClick={() => handleDownload(project)} disabled={downloadingId === project._id}>{downloadingId === project._id ? 'Downloading...' : 'Download ZIP'}</button>
                     )}
@@ -225,13 +225,14 @@ export default function AdminProjects() {
             <div className="form-group"><label className="form-label">Description (optional)</label><textarea className="form-textarea" rows={3} placeholder="What learners will build and practise..." value={form.description} onChange={event => setForm(current => ({ ...current, description: event.target.value }))} /></div>
             <div className="form-group">
               <label className="form-label">Project Resource</label>
-              <select className="form-select" value={form.resourceType} onChange={event => { setProjectFile(null); setForm(current => ({ ...current, resourceType: event.target.value as 'drive' | 'zip' })); }}>
+              <select className="form-select" value={form.resourceType} onChange={event => { setProjectFile(null); setForm(current => ({ ...current, resourceType: event.target.value as 'drive' | 'github' | 'zip' })); }}>
                 <option value="drive">Google Drive link</option>
+                <option value="github">GitHub repository</option>
                 <option value="zip">ZIP file</option>
               </select>
             </div>
-            {form.resourceType === 'drive' ? (
-              <div className="form-group"><label className="form-label">Google Drive Link</label><input className="form-input" type="url" placeholder="https://drive.google.com/..." value={form.resourceUrl} onChange={event => setForm(current => ({ ...current, resourceUrl: event.target.value }))} /></div>
+            {form.resourceType !== 'zip' ? (
+              <div className="form-group"><label className="form-label">{form.resourceType === 'github' ? 'GitHub Repository Link' : 'Google Drive Link'}</label><input className="form-input" type="url" placeholder={form.resourceType === 'github' ? 'https://github.com/owner/repository' : 'https://drive.google.com/...'} value={form.resourceUrl} onChange={event => setForm(current => ({ ...current, resourceUrl: event.target.value }))} /></div>
             ) : (
               <div className="form-group"><label className="form-label">ZIP File {editProject?.resourceType === 'zip' ? '(leave empty to keep current file)' : ''}</label><input className="form-input" type="file" accept=".zip,application/zip,application/x-zip-compressed" onChange={event => setProjectFile(event.target.files?.[0] || null)} /><small className="form-help">Maximum file size: 50 MB.</small></div>
             )}

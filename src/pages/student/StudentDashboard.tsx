@@ -54,7 +54,7 @@ interface Project {
   name: string;
   description: string;
   skills: string[];
-  resourceType: 'drive' | 'zip';
+  resourceType: 'drive' | 'github' | 'zip';
   resourceUrl?: string;
   originalFileName?: string;
   createdAt: string;
@@ -1252,18 +1252,18 @@ export default function StudentDashboard() {
             {projects.map((project, index) => (
               <article key={project._id} className="student-material-card student-project-card">
                 <div className="student-type-mark" style={{ background: project.resourceType === 'zip' ? '#7c3aed15' : '#05966915', color: project.resourceType === 'zip' ? '#7c3aed' : '#059669' }}>
-                  {project.resourceType === 'zip' ? 'ZIP' : 'DR'}
+                  {project.resourceType === 'zip' ? 'ZIP' : project.resourceType === 'github' ? 'GH' : 'DR'}
                 </div>
                 <div className="student-material-copy">
-                  <span>Project #{index + 1} • {project.resourceType === 'zip' ? 'ZIP download' : 'Google Drive'}</span>
+                  <span>Project #{index + 1} • {project.resourceType === 'zip' ? 'ZIP download' : project.resourceType === 'github' ? 'GitHub' : 'Google Drive'}</span>
                   <h3>{project.name}</h3>
                   {project.description && <p>{project.description}</p>}
                   <div className="project-skill-list student-project-skills">
                     {(project.skills || []).map(skill => <span key={skill} className="project-skill">{skill}</span>)}
                   </div>
                 </div>
-                {project.resourceType === 'drive' ? (
-                  <a className="btn btn-primary btn-sm" href={project.resourceUrl} target="_blank" rel="noreferrer">Open Project</a>
+                {project.resourceType !== 'zip' ? (
+                  <a className="btn btn-primary btn-sm" href={project.resourceUrl} target="_blank" rel="noreferrer">{project.resourceType === 'github' ? 'Open GitHub' : 'Open Project'}</a>
                 ) : (
                   <button className="btn btn-primary btn-sm" onClick={() => handleProjectDownload(project)} disabled={downloadingProjectId === project._id}>
                     {downloadingProjectId === project._id ? 'Downloading...' : 'Download ZIP'}
