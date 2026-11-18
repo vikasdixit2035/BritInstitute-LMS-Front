@@ -5,6 +5,8 @@ import BrandLogo from '../components/BrandLogo';
 import { authApi } from '../api';
 import { isAxiosError } from 'axios';
 
+const unavailableReset = 'Password reset is unavailable on this LMS server. Contact your LMS administrator.';
+
 export default function LoginPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -53,6 +55,8 @@ export default function LoginPage() {
     } catch (err) {
       if (isAxiosError(err) && !err.response) {
         setError('Could not reach the LMS. Check your connection and try again.');
+      } else if (isAxiosError(err) && err.response?.status === 404) {
+        setError(unavailableReset);
       } else {
         setError((isAxiosError(err) && err.response?.data?.message) || 'Unable to request a code. Please try again.');
       }
@@ -75,6 +79,10 @@ export default function LoginPage() {
         await login(username, password);
       }
     } catch (err: unknown) {
+      if (step === 'reset' && isAxiosError(err) && err.response?.status === 404) {
+        setError(unavailableReset);
+        return;
+      }
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
       setError(msg || (step === 'reset' ? 'Unable to reset your password. Please try again.' : 'Login failed. Please check your credentials.'));
     } finally {
