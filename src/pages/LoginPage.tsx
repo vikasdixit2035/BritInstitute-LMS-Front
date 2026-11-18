@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import BrandLogo from '../components/BrandLogo';
+import { authApi } from '../api';
 
 export default function LoginPage() {
   const [username, setUsername] = useState('');
@@ -9,6 +10,15 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [step, setStep] = useState<'login' | 'request' | 'reset'>('login');
+  const [otp, setOtp] = useState('');
+  const [notice, setNotice] = useState('');
+  const [resendAt, setResendAt] = useState(0);
+  useEffect(() => {
+    if (!resendAt) return;
+    const timer = window.setTimeout(() => setResendAt(0), Math.max(0, resendAt - Date.now()));
+    return () => window.clearTimeout(timer);
+  }, [resendAt]);
   const { user, login } = useAuth();
   const navigate = useNavigate();
 
@@ -22,16 +32,46 @@ export default function LoginPage() {
     }
   }, [user, navigate]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const switchStep = (next: typeof step) => {
+    setStep(next);
+    setPassword('');
+    setShowPassword(false);
+    setOtp('');
+    setNotice('');
+    setError('');
+  };
+
+  const requestCode = async () => {
     setError('');
     setLoading(true);
     try {
-      await login(username, password);
-      // Navigation happens via the useEffect above once user state updates
+      const { data } = await authApi.requestPasswordReset(username);
+      switchStep('reset');
+      setNotice(data.message);
+      setResendAt(Date.now() + 60_000);
+    } catch {
+      setError('Unable to request a code. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (step === 'request') return requestCode();
+    setError('');
+    setLoading(true);
+    try {
+      if (step === 'reset') {
+        const { data } = await authApi.resetPassword(username, otp, password);
+        switchStep('login');
+        setNotice(data.message);
+      } else {
+        await login(username, password);
+      }
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      setError(msg || 'Login failed. Please check your credentials.');
+      setError(msg || (step === 'reset' ? 'Unable to reset your password. Please try again.' : 'Login failed. Please check your credentials.'));
     } finally {
       setLoading(false);
     }
@@ -63,17 +103,20 @@ export default function LoginPage() {
             <BrandLogo subtitle="LMS Portal" />
             <div>
               <p className="login-card-eyebrow">Secure access</p>
-              <h2>Enter your career dashboard</h2>
-              <p>Continue to classes, live projects, placement tools, and student progress.</p>
+              <h2>{step === 'login' ? 'Enter your career dashboard' : 'Reset your password'}</h2>
+              <p>{step === 'login' ? 'Continue to classes, live projects, placement tools, and student progress.' :
+                step === 'request' ? 'Enter your username to receive a code at your registered email address.' :
+                'Enter the six-digit code from your email within 10 minutes and choose a new password.'}</p>
             </div>
           </div>
 
           {error && (
-            <div className="alert alert-error">
+            <div className="alert alert-error" role="alert">
               {error}
             </div>
           )}
 
+          {notice && <p className="login-help-text" role="status">{notice}</p>}
           <form className="login-form" onSubmit={handleSubmit}>
             <div className="form-group">
               <label className="form-label" htmlFor="username">Username</label>
@@ -83,23 +126,30 @@ export default function LoginPage() {
                 type="text"
                 placeholder="Enter your username"
                 value={username}
+                readOnly={step === 'reset' || loading}
                 onChange={e => setUsername(e.target.value)}
                 required
                 autoComplete="username"
               />
             </div>
-            <div className="form-group">
-              <label className="form-label" htmlFor="password">Password</label>
+            {step === 'reset' && <div className="form-group">
+              <label className="form-label" htmlFor="otp">Email code</label>
+              <input id="otp" className="form-input" type="text" inputMode="numeric" autoComplete="one-time-code"
+                pattern="[0-9]{6}" maxLength={6} value={otp} onChange={e => setOtp(e.target.value)} required autoFocus />
+            </div>}
+            {step !== 'request' && <div className="form-group">
+              <label className="form-label" htmlFor="password">{step === 'reset' ? 'New password' : 'Password'}</label>
               <div className="password-field">
                 <input
                   id="password"
                   className="form-input"
                   type={showPassword ? 'text' : 'password'}
-                  placeholder="Enter your password"
+                  placeholder={step === 'reset' ? 'Choose a new password' : 'Enter your password'}
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                   required
-                  autoComplete="current-password"
+                  autoComplete={step === 'reset' ? 'new-password' : 'current-password'}
+                  aria-describedby={step === 'reset' ? 'password-help' : undefined}
                 />
                 <button
                   type="button"
@@ -123,7 +173,8 @@ export default function LoginPage() {
                   )}
                 </button>
               </div>
-            </div>
+              {step === 'reset' && <small id="password-help">Use at least 8 characters, including uppercase, lowercase, and a number.</small>}
+            </div>}
             <button
               id="login-btn"
               type="submit"
@@ -131,10 +182,20 @@ export default function LoginPage() {
               style={{ width: '100%', justifyContent: 'center', padding: '13px', fontSize: '15px', marginTop: '6px' }}
               disabled={loading}
             >
-              {loading ? (
-                <><span className="spinner" style={{ width: '18px', height: '18px', borderWidth: '2px' }} /> Signing in...</>
-              ) : 'Sign In'}
+              {step === 'login' ? (loading ? 'Signing in…' : 'Sign In') :
+                step === 'request' ? (loading ? 'Sending…' : 'Send email code') :
+                (loading ? 'Please wait…' : 'Reset password')}
             </button>
+            {step === 'login' ? (
+              <button type="button" className="login-recovery-link" disabled={loading} onClick={() => {
+                switchStep('request');
+                if (username.trim()) void requestCode();
+              }}>Forgot password?</button>
+            ) : <>
+              {step === 'reset' && <button type="button" className="login-recovery-link" disabled={loading || !!resendAt}
+                onClick={requestCode}>{resendAt ? 'You can resend the code after one minute' : 'Resend code'}</button>}
+              <button type="button" className="login-recovery-link" disabled={loading} onClick={() => switchStep('login')}>Back to sign in</button>
+            </>}
           </form>
 
           <p className="login-help-text">

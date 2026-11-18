@@ -535,6 +535,22 @@ body {
   background: #f9fcff;
 }
 
+.login-recovery-link {
+  justify-self: center;
+  padding: 6px;
+  background: transparent;
+  border: 0;
+  color: #1850ae;
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.login-recovery-link:disabled {
+  color: var(--text-muted);
+  cursor: default;
+}
+
 .login-card .form-input:focus {
   background: #ffffff;
 }
