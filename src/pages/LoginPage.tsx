@@ -148,7 +148,7 @@ export default function LoginPage() {
             {step === 'reset' && <div className="form-group">
               <label className="form-label" htmlFor="otp">Email code</label>
               <input id="otp" className="form-input" type="text" inputMode="numeric" autoComplete="one-time-code"
-                pattern="[0-9]{6}" maxLength={6} value={otp} onChange={e => setOtp(e.target.value)} required autoFocus />
+                pattern="[0-9]{6}" maxLength={6} value={otp} onChange={e => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))} required autoFocus />
             </div>}
             {step !== 'request' && <div className="form-group">
               <label className="form-label" htmlFor="password">{step === 'reset' ? 'New password' : 'Password'}</label>
