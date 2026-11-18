@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import BrandLogo from '../components/BrandLogo';
 import { authApi } from '../api';
+import { isAxiosError } from 'axios';
 
 export default function LoginPage() {
   const [username, setUsername] = useState('');
@@ -49,8 +50,12 @@ export default function LoginPage() {
       switchStep('reset');
       setNotice(data.message);
       setResendAt(Date.now() + 60_000);
-    } catch {
-      setError('Unable to request a code. Please try again.');
+    } catch (err) {
+      if (isAxiosError(err) && !err.response) {
+        setError('Could not reach the LMS. Check your connection and try again.');
+      } else {
+        setError((isAxiosError(err) && err.response?.data?.message) || 'Unable to request a code. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -187,10 +192,8 @@ export default function LoginPage() {
                 (loading ? 'Please wait…' : 'Reset password')}
             </button>
             {step === 'login' ? (
-              <button type="button" className="login-recovery-link" disabled={loading} onClick={() => {
-                switchStep('request');
-                if (username.trim()) void requestCode();
-              }}>Forgot password?</button>
+              <button type="button" className="login-recovery-link" disabled={loading}
+                onClick={() => switchStep('request')}>Forgot password?</button>
             ) : <>
               {step === 'reset' && <button type="button" className="login-recovery-link" disabled={loading || !!resendAt}
                 onClick={requestCode}>{resendAt ? 'You can resend the code after one minute' : 'Resend code'}</button>}
