@@ -166,4 +166,17 @@ export const studentPortalApi = {
   requestCertificate: () => api.post('/student-portal/certificate-request'),
 };
 
+export const placementDriveApi = {
+  getMine: () => api.get('/placement-drive/mine'),
+  saveMine: (formData: FormData) =>
+    api.post('/placement-drive/mine', formData, {
+      headers: { 'Content-Type': undefined },
+    }),
+  getAllAdmin: () => api.get('/placement-drive/admin/all'),
+  updateAdminReview: (
+    id: string,
+    data: { status: string; adminNotes: string; optimizedResumeUrl?: string }
+  ) => api.patch(`/placement-drive/admin/${id}`, data),
+};
+
 export default api;

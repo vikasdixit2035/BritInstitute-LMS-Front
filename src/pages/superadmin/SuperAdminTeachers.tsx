@@ -19,11 +19,17 @@ interface Stats {
 
 const passwordHelpText = 'Password must be at least 8 characters and include uppercase, lowercase, and a number.';
 const isValidPassword = (password: string) =>
-  password.length >= 8 && /[A-Z]/.test(password) && /[a-z]/.test(password) && /[0-9]/.test(password);
+  password.length >= 8 && 
+/[A-Z]/.test(password)
+ && /[a-z]/.test(password)
+  && /[0-9]/.test(password);
 
 export default function SuperAdminTeachers() {
   const [teachers, setTeachers] = useState<Teacher[]>([]);
-  const [stats, setStats] = useState<Stats>({ totalTeachers: 0, activeTeachers: 0, totalStudents: 0, totalAdmins: 0 });
+  const [stats, setStats] = useState<Stats>({ 
+    totalTeachers: 0, 
+    activeTeachers: 0, 
+    totalStudents: 0, totalAdmins: 0 });
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editTeacher, setEditTeacher] = useState<Teacher | null>(null);

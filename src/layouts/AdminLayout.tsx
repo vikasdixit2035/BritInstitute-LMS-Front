@@ -25,6 +25,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { icon: '🏗️', label: 'Foundation', path: `${basePath}/foundation` },
     { icon: '📖', label: 'Study Material', path: `${basePath}/study-materials` },
     { icon: '💼', label: 'Projects', path: `${basePath}/projects` },
+    { icon: '🎯', label: 'Placement Drive', path: `${basePath}/placement-drive` },
     { icon: '📝', label: 'Assignments', path: `${basePath}/assignments` },
     { icon: '🗓️', label: 'Appointments', path: `${basePath}/appointments` },
   ];

@@ -185,6 +185,23 @@ export default function LoginPage() {
                     </svg>
                   )}
                 </button>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '8px' }}>
+  <button
+    type="button"
+    onClick={() => navigate('/forgot-password')}
+    style={{
+      background: 'none',
+      border: 'none',
+      color: '#2563eb',
+      fontSize: '13px',
+      fontWeight: 600,
+      cursor: 'pointer',
+      padding: '4px 0'
+    }}
+  >
+    Forgot Password?
+  </button>
+</div>
               </div>
               {step === 'reset' && <small id="password-help">Use at least 8 characters, including uppercase, lowercase, and a number.</small>}
             </div>}

@@ -1,13 +1,35 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { liveClassApi, recordedApi, assignmentApi, sessionApi, curriculumApi, studentPortalApi, foundationApi, studyMaterialApi, projectApi } from '../../api';
+import {
+  liveClassApi,
+  recordedApi,
+  assignmentApi,
+  sessionApi,
+  curriculumApi,
+  studentPortalApi,
+  foundationApi,
+  studyMaterialApi,
+  projectApi,
+  placementDriveApi,
+} from '../../api';
 import BrandLogo from '../../components/BrandLogo';
 import RecordedLecturePlayer from '../../components/RecordedLecturePlayer';
 import ChangePasswordForm from '../../components/ChangePasswordForm';
 import { formatUkDate, formatUkDateTime, formatUkTime, toUkDateInputValue } from '../../utils/ukTime';
 
-type MainView = 'dashboard' | 'curriculum' | 'sessions' | 'performance' | 'certificates' | 'foundation' | 'study-materials' | 'projects' | 'settings';
+type MainView =
+  | 'dashboard'
+  | 'curriculum'
+  | 'sessions'
+  | 'performance'
+  | 'certificates'
+  | 'foundation'
+  | 'study-materials'
+  | 'projects'
+  | 'placement-drive'
+  | 'settings';
+
 type DashboardTab = 'live' | 'assignments' | 'recorded';
 
 interface LiveClass {
@@ -58,6 +80,18 @@ interface Project {
   resourceUrl?: string;
   originalFileName?: string;
   createdAt: string;
+}
+
+interface PlacementProfile {
+  _id: string;
+  resumeUrl: string;
+  resumeFileName: string;
+  linkedinUrl: string;
+  githubUrl: string;
+  status: 'pending' | 'in_review' | 'optimized';
+  adminNotes?: string;
+  optimizedResumeUrl?: string;
+  updatedAt: string;
 }
 
 interface Assignment {
@@ -199,6 +233,16 @@ export default function StudentDashboard() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [portalError, setPortalError] = useState('');
 
+  // Placement Drive States
+  const [placementProfile, setPlacementProfile] = useState<PlacementProfile | null>(null);
+  const [placementForm, setPlacementForm] = useState({ linkedinUrl: '', githubUrl: '' });
+  const [resumeFile, setResumeFile] = useState<File | null>(null);
+  const [isDraggingResume, setIsDraggingResume] = useState(false);
+  const [placementSaving, setPlacementSaving] = useState(false);
+  const [placementMessage, setPlacementMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [placementToast, setPlacementToast] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const resumeInputRef = useRef<HTMLInputElement | null>(null);
+
   const [loading, setLoading] = useState(true);
   const [attendingId, setAttendingId] = useState<string | null>(null);
   const [expandedLecture, setExpandedLecture] = useState<string | null>(null);
@@ -224,6 +268,24 @@ export default function StudentDashboard() {
   const courseId = (user?.enrolledCourse as { _id?: string } | undefined)?._id;
   const courseTitle = (user?.enrolledCourse as { title?: string } | undefined)?.title || 'Your programme';
 
+  useEffect(() => {
+    const savedToast = sessionStorage.getItem('placement_toast');
+    if (savedToast) {
+      sessionStorage.removeItem('placement_toast');
+      try {
+        setPlacementToast(JSON.parse(savedToast));
+      } catch {
+        // ignore invalid JSON
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!placementToast) return;
+    const timeout = setTimeout(() => setPlacementToast(null), 4000);
+    return () => clearTimeout(timeout);
+  }, [placementToast]);
+
   const fetchData = useCallback(async () => {
     if (!courseId) { setLoading(false); return; }
     setLoading(true);
@@ -239,6 +301,7 @@ export default function StudentDashboard() {
         foundationApi.getAll().catch(() => ({ data: { resources: [] } })),
         studyMaterialApi.getAll().catch(() => ({ data: { materials: [] } })),
         projectApi.getAll().catch(() => ({ data: { projects: [] } })),
+        placementDriveApi.getMine().catch(() => ({ data: { profile: null } })),
       ]);
       setLiveClasses(lc.data.liveClasses);
       setLectures(lv.data.lectures);
@@ -251,6 +314,11 @@ export default function StudentDashboard() {
       setStudyMaterials(materials.data.materials || []);
       setProjects(projectRes.data.projects || []);
       setPortalError(summary.data.summary ? '' : 'Some student insight widgets could not load from the backend.');
+
+      setPlacementProfile(null);
+      setPlacementForm({ linkedinUrl: '', githubUrl: '' });
+      setResumeFile(null);
+      if (resumeInputRef.current) resumeInputRef.current.value = '';
 
       const wt: Record<string, number> = {};
       lv.data.lectures.forEach((l: Lecture) => { wt[l._id] = l.watchDuration || 0; });
@@ -437,6 +505,88 @@ export default function StudentDashboard() {
     }
   };
 
+  const handleResumeSelection = (file: File | null) => {
+    if (!file) return;
+    const validExtensions = ['.pdf', '.doc', '.docx'];
+    const ext = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+    if (!validExtensions.includes(ext)) {
+      const errText = 'Invalid file format. Please select a PDF, DOC, or DOCX file.';
+      setPlacementMessage({ type: 'error', text: errText });
+      setPlacementToast({ type: 'error', text: errText });
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      const errText = 'File size exceeds 5MB limit.';
+      setPlacementMessage({ type: 'error', text: errText });
+      setPlacementToast({ type: 'error', text: errText });
+      return;
+    }
+    setPlacementMessage(null);
+    setResumeFile(file);
+  };
+
+  const handleResumeDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDraggingResume(false);
+    const droppedFile = e.dataTransfer.files?.[0] || null;
+    handleResumeSelection(droppedFile);
+  };
+
+  const handleSavePlacementProfile = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setPlacementMessage(null);
+
+    if (!placementForm.linkedinUrl.trim() || !placementForm.githubUrl.trim()) {
+      const errText = 'Please enter both your LinkedIn and GitHub profile URLs.';
+      setPlacementMessage({ type: 'error', text: errText });
+      setPlacementToast({ type: 'error', text: errText });
+      return;
+    }
+
+    if (!resumeFile && !placementProfile?.resumeUrl) {
+      const errText = 'Please upload your resume (PDF, DOC, or DOCX).';
+      setPlacementMessage({ type: 'error', text: errText });
+      setPlacementToast({ type: 'error', text: errText });
+      return;
+    }
+
+    setPlacementSaving(true);
+    try {
+      const formData = new FormData();
+      formData.append('linkedinUrl', placementForm.linkedinUrl.trim());
+      formData.append('githubUrl', placementForm.githubUrl.trim());
+      if (resumeFile) {
+        formData.append('resume', resumeFile);
+      }
+
+      await placementDriveApi.saveMine(formData);
+
+      // Clear all filled fields & uploaded file card from UI after save
+      setPlacementForm({ linkedinUrl: '', githubUrl: '' });
+      setResumeFile(null);
+      setPlacementProfile(null);
+      if (resumeInputRef.current) resumeInputRef.current.value = '';
+
+      const successText = 'Your details submitted successfully';
+      setPlacementMessage({ type: 'success', text: successText });
+      setPlacementToast({ type: 'success', text: successText });
+      sessionStorage.setItem('placement_toast', JSON.stringify({ type: 'success', text: successText }));
+    } catch (err: any) {
+      console.error('Placement upload error:', err);
+      const serverMsg =
+        err.response?.data?.message ||
+        (err.response?.status === 404
+          ? 'Backend route /api/placement-drive/mine not found (404). Make sure backend routes are registered and server is restarted.'
+          : err.message) ||
+        'Failed to submit placement details.';
+      setPlacementMessage({ type: 'error', text: serverMsg });
+      setPlacementToast({ type: 'error', text: serverMsg });
+    } finally {
+      setPlacementSaving(false);
+    }
+  };
+
   const handleLogout = () => { logout(); navigate('/login'); };
 
   const now = new Date();
@@ -499,6 +649,7 @@ export default function StudentDashboard() {
     { id: 'foundation', code: 'FB', label: 'Foundation & Build-Up' },
     { id: 'study-materials', code: 'SM', label: 'Study Material' },
     { id: 'projects', code: 'PJ', label: 'Projects' },
+    { id: 'placement-drive', code: 'PD', label: 'Placement Drive' },
     { id: 'settings', code: 'ST', label: 'Settings' },
   ];
 
@@ -1277,6 +1428,318 @@ export default function StudentDashboard() {
     </>
   );
 
+  const renderPlacementDrive = () => {
+    const formatFileSize = (bytes: number) => {
+      if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+      return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    };
+
+    const stepCount =
+      (resumeFile || placementProfile?.resumeUrl ? 1 : 0) +
+      (placementForm.linkedinUrl.trim() ? 1 : 0) +
+      (placementForm.githubUrl.trim() ? 1 : 0);
+
+    const backendBase = import.meta.env.VITE_API_URL?.replace(/\/api\/?$/, '') || 'http://localhost:5000';
+    const fullResumeUrl = placementProfile?.resumeUrl
+      ? placementProfile.resumeUrl.startsWith('http')
+        ? placementProfile.resumeUrl
+        : `${backendBase}${placementProfile.resumeUrl}`
+      : '';
+
+    return (
+      <div style={{ maxWidth: '640px', margin: '0 auto' }}>
+        <section className="student-page-hero split" style={{ padding: '22px 26px', marginBottom: '18px' }}>
+          <div>
+            <span className="student-eyebrow">Placement Drive</span>
+            <h1 style={{ fontSize: '22px' }}>Profile Optimization</h1>
+            <p style={{ fontSize: '13px' }}>
+              Upload your Resume, LinkedIn, and GitHub links so the admin team can review and optimize them.
+            </p>
+          </div>
+          <span
+            className={`student-pill ${
+              placementProfile?.status === 'optimized'
+                ? 'success'
+                : placementProfile?.status === 'in_review'
+                ? 'warning'
+                : 'primary'
+            }`}
+          >
+            {placementProfile?.status === 'optimized'
+              ? 'Optimized'
+              : placementProfile?.status === 'in_review'
+              ? 'In Review'
+              : `${stepCount}/3 Ready`}
+          </span>
+        </section>
+
+        {placementProfile?.adminNotes && (
+          <section
+            className="student-section-panel"
+            style={{ marginBottom: '18px', borderLeft: '4px solid #2457d3', padding: '16px 20px' }}
+          >
+            <div className="student-section-head compact">
+              <h2 style={{ fontSize: '15px' }}>Admin Optimization Feedback</h2>
+              {placementProfile.optimizedResumeUrl && (
+                <a
+                  href={placementProfile.optimizedResumeUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="btn btn-primary btn-sm"
+                >
+                  Download Optimized Resume
+                </a>
+              )}
+            </div>
+            <p className="student-panel-copy" style={{ whiteSpace: 'pre-line', fontSize: '13px' }}>
+              {placementProfile.adminNotes}
+            </p>
+          </section>
+        )}
+
+        <section className="student-section-panel" style={{ padding: '24px' }}>
+          <div className="student-section-head" style={{ marginBottom: '14px' }}>
+            <div>
+              <span className="student-eyebrow">3-Step Submission</span>
+              <h2 style={{ fontSize: '18px' }}>Your Placement Profile</h2>
+            </div>
+            {placementProfile?.updatedAt && (
+              <span className="student-pill neutral" style={{ fontSize: '11px' }}>
+                Updated {formatDateTime(placementProfile.updatedAt)}
+              </span>
+            )}
+          </div>
+
+          <div style={{ marginBottom: '20px' }}>
+            <div className="student-progress-track">
+              <div style={{ width: `${Math.round((stepCount / 3) * 100)}%`, transition: 'width 0.3s ease' }} />
+            </div>
+          </div>
+
+          {placementMessage && (
+            <div className={`alert ${placementMessage.type === 'success' ? 'alert-success' : 'alert-error'}`}>
+              {placementMessage.text}
+            </div>
+          )}
+
+          <form onSubmit={handleSavePlacementProfile} className="student-stack" style={{ gap: '16px' }}>
+            {/* Field 1: Interactive Drag & Drop Resume Upload */}
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <label className="form-label">1. Upload Resume</label>
+
+              <input
+                ref={resumeInputRef}
+                type="file"
+                accept=".pdf,.doc,.docx"
+                style={{ display: 'none' }}
+                onChange={(e) => handleResumeSelection(e.target.files?.[0] || null)}
+              />
+
+              <div
+                onClick={() => resumeInputRef.current?.click()}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setIsDraggingResume(true);
+                }}
+                onDragLeave={() => setIsDraggingResume(false)}
+                onDrop={handleResumeDrop}
+                style={{
+                  border: `2px dashed ${isDraggingResume ? '#4f46e5' : '#818cf8'}`,
+                  borderRadius: '14px',
+                  padding: '28px 20px',
+                  textAlign: 'center',
+                  backgroundColor: isDraggingResume ? '#eef2ff' : '#fafbff',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                }}
+              >
+                <p style={{ margin: 0, fontSize: '15px', fontWeight: 500, color: '#334155', lineHeight: 1.5 }}>
+                  Drag and drop your resume to upload
+                  <br />
+                  or
+                </p>
+                <span
+                  style={{
+                    display: 'inline-block',
+                    marginTop: '6px',
+                    fontSize: '15px',
+                    fontWeight: 600,
+                    color: '#4f46e5',
+                  }}
+                >
+                  Select file
+                </span>
+                <p style={{ margin: '8px 0 0', fontSize: '12px', color: '#94a3b8' }}>
+                  PDF, DOC, DOCX • Max file size 5 MB
+                </p>
+              </div>
+
+              {/* Selected New File Card */}
+              {resumeFile && (
+                <div
+                  style={{
+                    marginTop: '10px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '10px 14px',
+                    borderRadius: '10px',
+                    border: '1px solid #e2e8f0',
+                    backgroundColor: '#ffffff',
+                    boxShadow: '0 2px 6px rgba(15, 23, 42, 0.04)',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', overflow: 'hidden' }}>
+                    <span
+                      style={{
+                        padding: '4px 8px',
+                        borderRadius: '6px',
+                        backgroundColor: '#eef2ff',
+                        color: '#4f46e5',
+                        fontSize: '11px',
+                        fontWeight: 700,
+                      }}
+                    >
+                      NEW
+                    </span>
+                    <span
+                      style={{
+                        fontSize: '13px',
+                        fontWeight: 600,
+                        color: '#1e293b',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                      }}
+                    >
+                      {resumeFile.name}
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
+                    <span style={{ fontSize: '12px', color: '#64748b' }}>{formatFileSize(resumeFile.size)}</span>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setResumeFile(null);
+                        if (resumeInputRef.current) resumeInputRef.current.value = '';
+                      }}
+                      style={{
+                        border: 'none',
+                        background: '#fee2e2',
+                        color: '#dc2626',
+                        borderRadius: '6px',
+                        width: '24px',
+                        height: '24px',
+                        cursor: 'pointer',
+                        fontWeight: 700,
+                        fontSize: '12px',
+                      }}
+                      title="Remove file"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Existing Saved Resume Card */}
+              {!resumeFile && placementProfile?.resumeUrl && (
+                <div
+                  style={{
+                    marginTop: '10px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '10px 14px',
+                    borderRadius: '10px',
+                    border: '1px solid #e2e8f0',
+                    backgroundColor: '#f8fafc',
+                  }}
+                >
+                  <span style={{ fontSize: '13px', fontWeight: 600, color: '#1e293b' }}>
+                    {placementProfile.resumeFileName}
+                  </span>
+                  <a
+                    href={fullResumeUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="btn btn-secondary btn-sm"
+                  >
+                    View PDF
+                  </a>
+                </div>
+              )}
+            </div>
+
+            {/* Field 2: LinkedIn Link */}
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <label className="form-label">2. LinkedIn Profile Link</label>
+                {placementForm.linkedinUrl.trim() && (
+                  <a
+                    href={placementForm.linkedinUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{ fontSize: '12px', color: '#2457d3', fontWeight: 600 }}
+                  >
+                    Test Link ↗
+                  </a>
+                )}
+              </div>
+              <input
+                type="url"
+                className="form-input"
+                placeholder="https://www.linkedin.com/in/your-username"
+                value={placementForm.linkedinUrl}
+                onChange={(e) => setPlacementForm((prev) => ({ ...prev, linkedinUrl: e.target.value }))}
+                required
+              />
+            </div>
+
+            {/* Field 3: GitHub Link */}
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <label className="form-label">3. GitHub Profile Link</label>
+                {placementForm.githubUrl.trim() && (
+                  <a
+                    href={placementForm.githubUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{ fontSize: '12px', color: '#2457d3', fontWeight: 600 }}
+                  >
+                    Test Link ↗
+                  </a>
+                )}
+              </div>
+              <input
+                type="url"
+                className="form-input"
+                placeholder="https://github.com/your-username"
+                value={placementForm.githubUrl}
+                onChange={(e) => setPlacementForm((prev) => ({ ...prev, githubUrl: e.target.value }))}
+                required
+              />
+            </div>
+
+            <div className="modal-actions" style={{ justifyContent: 'space-between', marginTop: '6px' }}>
+              <span style={{ fontSize: '12px', color: '#64748b' }}>
+                {stepCount === 3 ? 'All 3 fields ready to submit' : `Complete ${3 - stepCount} more field(s)`}
+              </span>
+              <button type="submit" className="btn btn-primary" disabled={placementSaving}>
+                {placementSaving
+                  ? 'Uploading...'
+                  : placementProfile
+                  ? 'Update Placement Profile'
+                  : 'Submit for Optimization'}
+              </button>
+            </div>
+          </form>
+        </section>
+      </div>
+    );
+  };
+
   const renderSettings = () => (
     <section className="student-settings-panel">
       <span className="student-eyebrow">Account</span>
@@ -1348,10 +1811,69 @@ export default function StudentDashboard() {
             {view === 'foundation' && renderFoundationBuildUp()}
             {view === 'study-materials' && renderStudyMaterials()}
             {view === 'projects' && renderProjects()}
+            {view === 'placement-drive' && renderPlacementDrive()}
             {view === 'settings' && renderSettings()}
           </div>
         )}
       </main>
+
+      {placementToast && (
+        <div
+          role="status"
+          aria-live="polite"
+          style={{
+            position: 'fixed',
+            right: '24px',
+            bottom: '24px',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            padding: '14px 18px',
+            borderRadius: '12px',
+            backgroundColor: placementToast.type === 'success' ? '#0f172a' : '#7f1d1d',
+            color: '#ffffff',
+            boxShadow: '0 12px 28px rgba(15, 23, 42, 0.22)',
+            border: `1px solid ${placementToast.type === 'success' ? '#10b981' : '#f87171'}`,
+            fontSize: '14px',
+            fontWeight: 600,
+          }}
+        >
+          <span
+            style={{
+              width: '22px',
+              height: '22px',
+              borderRadius: '50%',
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: placementToast.type === 'success' ? '#10b981' : '#ef4444',
+              color: '#ffffff',
+              fontSize: '12px',
+              fontWeight: 700,
+            }}
+          >
+            {placementToast.type === 'success' ? '✓' : '!'}
+          </span>
+          <span>{placementToast.text}</span>
+          <button
+            type="button"
+            onClick={() => setPlacementToast(null)}
+            aria-label="Close notification"
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: '#cbd5e1',
+              cursor: 'pointer',
+              fontSize: '14px',
+              padding: '0 2px',
+              lineHeight: 1,
+            }}
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       {showBookingModal && (
         <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget) closeBookingModal(); }}>

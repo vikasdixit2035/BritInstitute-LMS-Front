@@ -24,6 +24,7 @@ import AdminCurriculum from './pages/admin/AdminCurriculum';
 import AdminActivity from './pages/admin/AdminActivity';
 import SuperAdminLayout from './layouts/SuperAdminLayout';
 import SuperAdminTeachers from './pages/superadmin/SuperAdminTeachers';
+import AdminPlacementDrive from './pages/admin/AdminPlacementDrive';
 
 // Route guard
 function ProtectedRoute({ children, roles }: { children: React.ReactNode; roles?: string[] }) {
@@ -116,6 +117,7 @@ function AppRoutes() {
       <Route path="/teacher/batches" element={<Navigate to="/admin/batches" replace />} />
       <Route path="/teacher/curriculum" element={<Navigate to="/admin/curriculum" replace />} />
       <Route path="/teacher/appointments" element={<Navigate to="/admin/appointments" replace />} />
+      <Route path="/admin/placement-drive" element={<AdminPlacementDrive />} />
 
       <Route path="/superadmin" element={
         <ProtectedRoute roles={['superadmin']}><SuperAdminLayout><SuperAdminTeachers /></SuperAdminLayout></ProtectedRoute>
