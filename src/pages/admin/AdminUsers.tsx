@@ -40,6 +40,7 @@ export default function AdminUsers() {
   const [search, setSearch] = useState('');
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const fetchAll = async () => {
     try {
@@ -55,10 +56,16 @@ export default function AdminUsers() {
     void fetchAll();
   }, []);
 
+  const closeModal = () => {
+    setShowModal(false);
+    setShowPassword(false);
+  };
+
   const openCreate = () => {
     setEditUser(null);
     setForm(emptyForm);
     setError('');
+    setShowPassword(false);
     setShowModal(true);
   };
 
@@ -73,6 +80,7 @@ export default function AdminUsers() {
       enrolledCourse: user.enrolledCourse?._id || '',
     });
     setError('');
+    setShowPassword(false);
     setShowModal(true);
   };
 
@@ -105,7 +113,7 @@ export default function AdminUsers() {
       }
 
       await fetchAll();
-      setShowModal(false);
+      closeModal();
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
       setError(msg || 'An error occurred');
@@ -209,11 +217,11 @@ export default function AdminUsers() {
       </div>
 
       {showModal && (
-        <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setShowModal(false); }}>
+        <div className="modal-overlay">
           <div className="modal">
             <div className="modal-header">
               <h2>{editUser ? '✏️ Edit Student' : '+ Add New Student'}</h2>
-              <button className="modal-close" onClick={() => setShowModal(false)}>✕</button>
+              <button type="button" className="modal-close" onClick={closeModal}>✕</button>
             </div>
 
             {error && <div className="alert alert-error">⚠️ {error}</div>}
@@ -238,8 +246,49 @@ export default function AdminUsers() {
             </div>
             <div className="form-group">
               <label className="form-label">{editUser ? 'New Password (leave blank to keep)' : 'Password'}</label>
-              <input className="form-input" type="password" placeholder={editUser ? 'Leave blank to keep current password' : 'e.g. Student2026'} value={form.password} onChange={(e) => setForm((prev) => ({ ...prev, password: e.target.value }))} />
-              <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{passwordHelpText}</div>
+              <div style={{ position: 'relative' }}>
+                <input
+                  className="form-input"
+                  style={{ paddingRight: '42px' }}
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder={editUser ? 'Leave blank to keep current password' : 'e.g. Student2026'}
+                  value={form.password}
+                  onChange={(e) => setForm((prev) => ({ ...prev, password: e.target.value }))}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  title={showPassword ? 'Hide password' : 'Show password'}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  style={{
+                    position: 'absolute',
+                    right: '12px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    color: '#64748b',
+                    display: 'flex',
+                    alignItems: 'center',
+                    padding: 0,
+                  }}
+                >
+                  {showPassword ? (
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
+                      <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
+                      <line x1="1" y1="1" x2="23" y2="23" />
+                    </svg>
+                  ) : (
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                      <circle cx="12" cy="12" r="3" />
+                    </svg>
+                  )}
+                </button>
+              </div>
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '6px' }}>{passwordHelpText}</div>
             </div>
             <div className="form-group">
               <label className="form-label">Enrolled Course</label>
@@ -250,8 +299,8 @@ export default function AdminUsers() {
             </div>
 
             <div className="modal-actions">
-              <button className="btn btn-secondary" onClick={() => setShowModal(false)}>Cancel</button>
-              <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
+              <button type="button" className="btn btn-secondary" onClick={closeModal}>Cancel</button>
+              <button type="button" className="btn btn-primary" onClick={handleSave} disabled={saving}>
                 {saving ? 'Saving...' : (editUser ? '✓ Update Student' : '+ Create Student')}
               </button>
             </div>

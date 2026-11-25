@@ -99,14 +99,7 @@ export default function AdminPlacementDrive() {
   const optimizedCount = profiles.filter((p) => p.status === 'optimized').length;
 
   return (
-    <div
-      className="fade-in"
-      style={{
-        maxWidth: '1240px',
-        margin: '0 auto',
-        padding: '28px 24px 48px',
-      }}
-    >
+    <div className="fade-in" style={{ padding: '4px 0 36px' }}>
       {/* Header Banner */}
       <div
         style={{
@@ -115,12 +108,11 @@ export default function AdminPlacementDrive() {
           alignItems: 'center',
           flexWrap: 'wrap',
           gap: '16px',
-          backgroundColor: '#ffffff',
-          border: '1px solid #e2e8f0',
+          background: 'linear-gradient(135deg, #eef5ff 0%, #f8fbff 100%)',
+          border: '1px solid #dbeafe',
           borderRadius: '16px',
-          padding: '24px 28px',
-          marginBottom: '24px',
-          boxShadow: '0 4px 16px rgba(15, 23, 42, 0.04)',
+          padding: '22px 26px',
+          marginBottom: '20px',
         }}
       >
         <div>
@@ -131,11 +123,11 @@ export default function AdminPlacementDrive() {
               fontWeight: 700,
               letterSpacing: '0.08em',
               textTransform: 'uppercase',
-              color: '#2457d3',
+              color: '#2563eb',
               marginBottom: '6px',
             }}
           >
-            Career & Placement Cell
+            CAREER & PLACEMENT CELL
           </span>
           <h1 style={{ margin: 0, fontSize: '24px', fontWeight: 700, color: '#0f172a' }}>
             Placement Drive Submissions
@@ -145,23 +137,23 @@ export default function AdminPlacementDrive() {
           </p>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <button
             type="button"
             onClick={loadProfiles}
             className="btn btn-secondary btn-sm"
-            style={{ padding: '9px 14px', borderRadius: '10px' }}
+            style={{ padding: '9px 14px', borderRadius: '10px', backgroundColor: '#ffffff' }}
           >
             ↻ Refresh
           </button>
           <span
             style={{
-              padding: '8px 16px',
+              padding: '8px 14px',
               borderRadius: '999px',
-              backgroundColor: '#eef2ff',
+              backgroundColor: '#e0e7ff',
               color: '#3730a3',
               fontWeight: 700,
-              fontSize: '13px',
+              fontSize: '12px',
             }}
           >
             {profiles.length} Total Submissions
@@ -169,17 +161,17 @@ export default function AdminPlacementDrive() {
         </div>
       </div>
 
-      {/* Summary Stat Cards */}
+      {/* 4 Summary Cards */}
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
           gap: '16px',
-          marginBottom: '24px',
+          marginBottom: '20px',
         }}
       >
         {[
-          { label: 'Total Profiles', value: profiles.length, accent: '#2457d3', bg: '#eff6ff' },
+          { label: 'Total Profiles', value: profiles.length, accent: '#2563eb', bg: '#eff6ff' },
           { label: 'Pending Review', value: pendingCount, accent: '#d97706', bg: '#fffbeb' },
           { label: 'In Review', value: inReviewCount, accent: '#7c3aed', bg: '#f5f3ff' },
           { label: 'Optimized', value: optimizedCount, accent: '#059669', bg: '#ecfdf5' },
@@ -190,25 +182,24 @@ export default function AdminPlacementDrive() {
               backgroundColor: '#ffffff',
               border: '1px solid #e2e8f0',
               borderRadius: '14px',
-              padding: '18px 22px',
+              padding: '18px 20px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              boxShadow: '0 2px 8px rgba(15, 23, 42, 0.03)',
             }}
           >
             <div>
-              <span style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#64748b' }}>
-                {stat.label}
-              </span>
-              <strong style={{ display: 'block', fontSize: '26px', fontWeight: 700, color: '#0f172a', marginTop: '4px' }}>
+              <strong style={{ display: 'block', fontSize: '26px', fontWeight: 700, color: '#0f172a' }}>
                 {stat.value}
               </strong>
+              <span style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#475569', marginTop: '4px' }}>
+                {stat.label}
+              </span>
             </div>
             <div
               style={{
-                width: '40px',
-                height: '40px',
+                width: '38px',
+                height: '38px',
                 borderRadius: '10px',
                 backgroundColor: stat.bg,
                 color: stat.accent,
@@ -216,7 +207,7 @@ export default function AdminPlacementDrive() {
                 alignItems: 'center',
                 justifyContent: 'center',
                 fontWeight: 700,
-                fontSize: '15px',
+                fontSize: '14px',
               }}
             >
               {stat.value}
@@ -225,43 +216,41 @@ export default function AdminPlacementDrive() {
         ))}
       </div>
 
-      {/* Main Content Card */}
+      {/* Main Submissions Card */}
       <div
         className="card"
         style={{
           backgroundColor: '#ffffff',
           border: '1px solid #e2e8f0',
           borderRadius: '16px',
-          padding: '24px 28px',
-          boxShadow: '0 4px 16px rgba(15, 23, 42, 0.04)',
+          padding: '22px 24px',
         }}
       >
-        {/* Search & Filter Toolbar */}
         <div
           style={{
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
-            gap: '14px',
+            gap: '12px',
             flexWrap: 'wrap',
-            paddingBottom: '20px',
-            marginBottom: '20px',
+            paddingBottom: '18px',
+            marginBottom: '18px',
             borderBottom: '1px solid #f1f5f9',
           }}
         >
           <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', flex: 1 }}>
             <input
               className="form-input"
-              style={{ maxWidth: '340px', padding: '10px 14px', borderRadius: '10px' }}
+              style={{ maxWidth: '320px', padding: '10px 14px', borderRadius: '10px' }}
               placeholder="Search student name, username, or batch..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
             <select
               className="form-select"
-              style={{ maxWidth: '200px', padding: '10px 14px', borderRadius: '10px' }}
+              style={{ maxWidth: '190px', padding: '10px 14px', borderRadius: '10px' }}
               value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value as any)}
+              onChange={(e) => setFilterStatus(e.target.value as 'all' | 'pending' | 'in_review' | 'optimized')}
             >
               <option value="all">All Statuses</option>
               <option value="pending">Pending Review</option>
@@ -275,7 +264,7 @@ export default function AdminPlacementDrive() {
         </div>
 
         {loading ? (
-          <div className="loading-center" style={{ padding: '48px 20px' }}>
+          <div className="loading-center" style={{ padding: '44px 20px' }}>
             <div className="spinner" />
             <span>Loading student submissions...</span>
           </div>
@@ -283,7 +272,7 @@ export default function AdminPlacementDrive() {
           <div
             style={{
               textAlign: 'center',
-              padding: '56px 24px',
+              padding: '48px 24px',
               backgroundColor: '#f8fafc',
               borderRadius: '14px',
               border: '1px dashed #cbd5e1',
@@ -310,23 +299,38 @@ export default function AdminPlacementDrive() {
               }}
             >
               <thead>
-                <tr style={{ backgroundColor: '#f8fafc', color: '#475569', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                  <th style={{ padding: '14px 16px', borderBottom: '1px solid #e2e8f0', borderTopLeftRadius: '10px' }}>
+                <tr
+                  style={{
+                    backgroundColor: '#f8fafc',
+                    color: '#475569',
+                    fontSize: '12px',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.04em',
+                  }}
+                >
+                  <th style={{ padding: '13px 16px', borderBottom: '1px solid #e2e8f0', borderTopLeftRadius: '10px' }}>
                     Student & Batch
                   </th>
-                  <th style={{ padding: '14px 16px', borderBottom: '1px solid #e2e8f0' }}>
+                  <th style={{ padding: '13px 16px', borderBottom: '1px solid #e2e8f0' }}>
                     Uploaded Resume
                   </th>
-                  <th style={{ padding: '14px 16px', borderBottom: '1px solid #e2e8f0' }}>
+                  <th style={{ padding: '13px 16px', borderBottom: '1px solid #e2e8f0' }}>
                     Profile Links
                   </th>
-                  <th style={{ padding: '14px 16px', borderBottom: '1px solid #e2e8f0' }}>
+                  <th style={{ padding: '13px 16px', borderBottom: '1px solid #e2e8f0' }}>
                     Status
                   </th>
-                  <th style={{ padding: '14px 16px', borderBottom: '1px solid #e2e8f0' }}>
+                  <th style={{ padding: '13px 16px', borderBottom: '1px solid #e2e8f0' }}>
                     Last Updated
                   </th>
-                  <th style={{ padding: '14px 16px', borderBottom: '1px solid #e2e8f0', textAlign: 'right', borderTopRightRadius: '10px' }}>
+                  <th
+                    style={{
+                      padding: '13px 16px',
+                      borderBottom: '1px solid #e2e8f0',
+                      textAlign: 'right',
+                      borderTopRightRadius: '10px',
+                    }}
+                  >
                     Action
                   </th>
                 </tr>
@@ -348,24 +352,18 @@ export default function AdminPlacementDrive() {
                       : { bg: '#e0e7ff', color: '#3730a3', label: 'Pending' };
 
                   return (
-                    <tr
-                      key={item._id}
-                      style={{
-                        borderBottom: '1px solid #f1f5f9',
-                        transition: 'background-color 0.15s ease',
-                      }}
-                    >
-                      <td style={{ padding: '16px', borderBottom: '1px solid #f1f5f9' }}>
+                    <tr key={item._id}>
+                      <td style={{ padding: '15px 16px', borderBottom: '1px solid #f1f5f9' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                           <div
                             style={{
-                              width: '38px',
-                              height: '38px',
+                              width: '36px',
+                              height: '36px',
                               borderRadius: '10px',
                               backgroundColor: '#eef2ff',
                               color: '#4338ca',
                               fontWeight: 700,
-                              fontSize: '13px',
+                              fontSize: '12px',
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center',
@@ -385,7 +383,7 @@ export default function AdminPlacementDrive() {
                         </div>
                       </td>
 
-                      <td style={{ padding: '16px', borderBottom: '1px solid #f1f5f9' }}>
+                      <td style={{ padding: '15px 16px', borderBottom: '1px solid #f1f5f9' }}>
                         <a
                           href={getFullAssetUrl(item.resumeUrl)}
                           target="_blank"
@@ -397,7 +395,7 @@ export default function AdminPlacementDrive() {
                             gap: '6px',
                             padding: '7px 12px',
                             borderRadius: '8px',
-                            fontSize: '13px',
+                            fontSize: '12px',
                             maxWidth: '210px',
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
@@ -409,8 +407,8 @@ export default function AdminPlacementDrive() {
                         </a>
                       </td>
 
-                      <td style={{ padding: '16px', borderBottom: '1px solid #f1f5f9' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <td style={{ padding: '15px 16px', borderBottom: '1px solid #f1f5f9' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                           <a
                             href={item.linkedinUrl}
                             target="_blank"
@@ -446,7 +444,7 @@ export default function AdminPlacementDrive() {
                         </div>
                       </td>
 
-                      <td style={{ padding: '16px', borderBottom: '1px solid #f1f5f9' }}>
+                      <td style={{ padding: '15px 16px', borderBottom: '1px solid #f1f5f9' }}>
                         <span
                           style={{
                             display: 'inline-block',
@@ -462,11 +460,11 @@ export default function AdminPlacementDrive() {
                         </span>
                       </td>
 
-                      <td style={{ padding: '16px', borderBottom: '1px solid #f1f5f9', fontSize: '12px', color: '#64748b' }}>
+                      <td style={{ padding: '15px 16px', borderBottom: '1px solid #f1f5f9', fontSize: '12px', color: '#64748b' }}>
                         {formatUkDateTime(item.updatedAt)}
                       </td>
 
-                      <td style={{ padding: '16px', borderBottom: '1px solid #f1f5f9', textAlign: 'right' }}>
+                      <td style={{ padding: '15px 16px', borderBottom: '1px solid #f1f5f9', textAlign: 'right' }}>
                         <button
                           className="btn btn-primary btn-sm"
                           style={{ padding: '8px 14px', borderRadius: '8px', fontWeight: 600 }}
@@ -484,7 +482,7 @@ export default function AdminPlacementDrive() {
         )}
       </div>
 
-      {/* Admin Optimization Modal */}
+      {/* Optimization Modal */}
       {selectedProfile && (
         <div
           className="modal-overlay"
@@ -493,21 +491,10 @@ export default function AdminPlacementDrive() {
             if (e.target === e.currentTarget) setSelectedProfile(null);
           }}
         >
-          <div
-            className="modal"
-            style={{
-              maxWidth: '540px',
-              padding: '28px',
-              borderRadius: '16px',
-            }}
-          >
+          <div className="modal" style={{ maxWidth: '540px', padding: '28px', borderRadius: '16px' }}>
             <div
               className="modal-header"
-              style={{
-                paddingBottom: '16px',
-                marginBottom: '20px',
-                borderBottom: '1px solid #e2e8f0',
-              }}
+              style={{ paddingBottom: '16px', marginBottom: '20px', borderBottom: '1px solid #e2e8f0' }}
             >
               <div>
                 <h2 style={{ margin: 0, fontSize: '20px' }}>Optimize Student Profile</h2>
@@ -528,7 +515,7 @@ export default function AdminPlacementDrive() {
                 className="form-select"
                 style={{ padding: '10px 12px', borderRadius: '10px' }}
                 value={statusInput}
-                onChange={(e) => setStatusInput(e.target.value as any)}
+                onChange={(e) => setStatusInput(e.target.value as 'pending' | 'in_review' | 'optimized')}
               >
                 <option value="pending">Pending Review</option>
                 <option value="in_review">In Review</option>

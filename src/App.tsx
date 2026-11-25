@@ -91,6 +91,9 @@ function AppRoutes() {
       <Route path="/admin/projects" element={
         <ProtectedRoute roles={['admin', 'teacher', 'superadmin']}><AdminShell><AdminProjects /></AdminShell></ProtectedRoute>
       } />
+      <Route path="/admin/placement-drive" element={
+        <ProtectedRoute roles={['admin', 'teacher', 'superadmin']}><AdminShell><AdminPlacementDrive /></AdminShell></ProtectedRoute>
+      } />
       <Route path="/admin/assignments" element={
         <ProtectedRoute roles={['admin', 'teacher', 'superadmin']}><AdminShell><AdminAssignments /></AdminShell></ProtectedRoute>
       } />
@@ -113,11 +116,11 @@ function AppRoutes() {
       <Route path="/teacher/foundation" element={<Navigate to="/admin/foundation" replace />} />
       <Route path="/teacher/study-materials" element={<Navigate to="/admin/study-materials" replace />} />
       <Route path="/teacher/projects" element={<Navigate to="/admin/projects" replace />} />
+      <Route path="/teacher/placement-drive" element={<Navigate to="/admin/placement-drive" replace />} />
       <Route path="/teacher/assignments" element={<Navigate to="/admin/assignments" replace />} />
       <Route path="/teacher/batches" element={<Navigate to="/admin/batches" replace />} />
       <Route path="/teacher/curriculum" element={<Navigate to="/admin/curriculum" replace />} />
       <Route path="/teacher/appointments" element={<Navigate to="/admin/appointments" replace />} />
-      <Route path="/admin/placement-drive" element={<AdminPlacementDrive />} />
 
       <Route path="/superadmin" element={
         <ProtectedRoute roles={['superadmin']}><SuperAdminLayout><SuperAdminTeachers /></SuperAdminLayout></ProtectedRoute>
